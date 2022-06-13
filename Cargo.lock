@@ -268,7 +268,10 @@ dependencies = [
 name = "cli"
 version = "0.1.0"
 dependencies = [
+ "borsh",
  "clap",
+ "sled",
+ "solana-sdk",
 ]
 
 [[package]]
@@ -301,6 +304,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 name = "contract"
 version = "0.1.0"
 dependencies = [
+ "borsh",
  "sled",
  "solana-sdk",
 ]

@@ -11,3 +11,6 @@ path = "src/main.rs"
 
 [dependencies]
 clap = "3.1.18"
+sled = "0.34.7"
+borsh = "0.9.3"
+solana-sdk = "1.10.24"
