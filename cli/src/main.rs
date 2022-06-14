@@ -19,7 +19,10 @@ type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 const IS_INITIALISED: &str = "is-initialised";
 fn main() -> Result<()> {
-    let store = sled::open("~/.erc1155-rs/store")?;
+    let mut path = dirs::home_dir().ok_or("could not find home directory")?;
+    path.push(".erc1155-rs");
+    path.push("store.txt");
+    let store = sled::open(path)?;
     if (store.get(IS_INITIALISED)?).is_none() {
         initialize_store(&store)?;
     }
