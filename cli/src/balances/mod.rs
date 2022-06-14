@@ -5,16 +5,20 @@ use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 
 pub fn command() -> Command<'static> {
-    Command::new("balances").args(vec![
-        Arg::new("owner")
-            .long("owner")
-            .takes_value(true)
-            .required(true),
-        Arg::new("token-id")
-            .long("token-id")
-            .takes_value(true)
-            .required(true),
-    ])
+    Command::new("balances")
+        .args(vec![
+            Arg::new("owner")
+                .long("owner")
+                .takes_value(true)
+                .required(true)
+                .help("Public key of the account whose balance is being checked"),
+            Arg::new("token-id")
+                .long("token-id")
+                .takes_value(true)
+                .required(true)
+                .help("The id of the token whose balance is being checked"),
+        ])
+        .about("Command allows to check the balance of a given token on a given account")
 }
 
 pub fn handle(store: sled::Db, matches: &clap::ArgMatches) -> crate::Result<()> {

@@ -6,10 +6,11 @@ use std::str::FromStr;
 
 pub fn command() -> Command<'static> {
     Command::new("approval")
-        .subcommand(Command::new("add").arg(Arg::new("address").takes_value(true).required(true)))
+        .subcommand(Command::new("add").about("Add an approval to the current account")
+            .arg(Arg::new("address").takes_value(true).help("Public key of the account to be approved").required(true)))
         .subcommand(
-            Command::new("remove").arg(Arg::new("address").takes_value(true).required(true)),
-        )
+            Command::new("remove").about("Remove an approval from the current account").arg(Arg::new("address").help("Public key of the account whose approval is to be revoked").takes_value(true).required(true)),
+        ).about("Commands related to setting approvals for an account, approved accounts can control the assets of the account their approved for")
 }
 
 pub fn handle(store: sled::Db, matches: &clap::ArgMatches) -> crate::Result<()> {

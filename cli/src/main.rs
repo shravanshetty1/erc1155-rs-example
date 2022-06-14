@@ -29,6 +29,7 @@ fn main() -> Result<()> {
         .subcommand(transfer::command())
         .subcommand(balances::command())
         .subcommand(approval::command())
+        .about("Application to interact with rust implementation of erc1155, contract state is stored locally instead of on the blockchain")
         .get_matches();
 
     return match matches.subcommand() {

@@ -5,21 +5,30 @@ use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 
 pub fn command() -> Command<'static> {
-    Command::new("transfer").args(vec![
-        Arg::new("from")
-            .long("from")
-            .takes_value(true)
-            .required(true),
-        Arg::new("to").long("to").takes_value(true).required(true),
-        Arg::new("token-id")
-            .long("token-id")
-            .takes_value(true)
-            .required(true),
-        Arg::new("amount")
-            .long("amount")
-            .takes_value(true)
-            .required(true),
-    ])
+    Command::new("transfer")
+        .args(vec![
+            Arg::new("from")
+                .long("from")
+                .takes_value(true)
+                .required(true)
+                .help("Public key of the account to transfer the tokens from"),
+            Arg::new("to")
+                .long("to")
+                .takes_value(true)
+                .required(true)
+                .help("Public key of the account to transfer the tokens to"),
+            Arg::new("token-id")
+                .long("token-id")
+                .takes_value(true)
+                .required(true)
+                .help("The id of the token to be transferred"),
+            Arg::new("amount")
+                .long("amount")
+                .takes_value(true)
+                .required(true)
+                .help("The amount of tokens to be transferred"),
+        ])
+        .about("Command that allows transferring tokens from one account to another")
 }
 
 pub fn handle(store: sled::Db, matches: &clap::ArgMatches) -> crate::Result<()> {

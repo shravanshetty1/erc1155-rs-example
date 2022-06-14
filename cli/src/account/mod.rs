@@ -7,10 +7,12 @@ use std::str::FromStr;
 
 pub fn command() -> Command<'static> {
     Command::new("account")
-        .subcommand(Command::new("list"))
-        .subcommand(Command::new("current"))
-        .subcommand(Command::new("set").arg(Arg::new("account").required(true)))
-        .subcommand(Command::new("state").arg(Arg::new("account").required(true)))
+        .subcommand(Command::new("list").about("Lists all known accounts"))
+        .subcommand(Command::new("current").about("Public key of the current account in use"))
+        .subcommand(Command::new("set").about("Allows setting the current account").arg(Arg::new("account")
+            .required(true).help("Public key of the account to set")))
+        .subcommand(Command::new("state").about("Prints the contract state of the current account - shows the list of approved accounts and balances of all tokens")
+            .arg(Arg::new("account").required(true))).about("Commands related to accounts in use")
 }
 
 pub fn handle(store: sled::Db, matches: &clap::ArgMatches) -> crate::Result<()> {
