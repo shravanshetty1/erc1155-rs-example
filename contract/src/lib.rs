@@ -32,12 +32,48 @@ impl ERC1155Implementation {
         ERC1155Implementation { store, caller }
     }
 
-    pub fn create_token(&self, supply: u128) {}
+    pub fn create_token(&self, supply: u128) -> crate::Result<()> {
+        let mut contract = Contract::get_from_db(&self.store)?;
+
+        let mut caller_state = Account::get_from_db(&self.store, self.caller)?;
+        caller_state
+            .balances
+            .insert(contract.token_count + 1, supply);
+        Account::set_to_db(&self.store, self.caller, caller_state)?;
+
+        contract.token_count += 1;
+        Contract::set_to_db(&self.store, contract)?;
+        Ok(())
+    }
+
+    pub fn account_state(&self, address: Pubkey) -> crate::Result<Account> {
+        Account::get_from_db(&self.store, address)
+    }
+}
+
+const CONTRACT_PREFIX: &str = "contract";
+#[derive(borsh::BorshSerialize, borsh::BorshDeserialize, Default)]
+pub struct Contract {
+    token_count: u128,
+}
+
+impl Contract {
+    fn get_from_db(store: &sled::Db) -> crate::Result<Contract> {
+        Ok(
+            Contract::try_from_slice(store.get(CONTRACT_PREFIX)?.unwrap_or_default().as_ref())
+                .unwrap_or_default(),
+        )
+    }
+
+    fn set_to_db(store: &sled::Db, state: Contract) -> crate::Result<()> {
+        store.insert(CONTRACT_PREFIX, IVec::from(borsh::to_vec(&state)?))?;
+        Ok(())
+    }
 }
 
 const ACCOUNT_PREFIX: &str = "account";
 
-#[derive(borsh::BorshSerialize, borsh::BorshDeserialize, Default)]
+#[derive(borsh::BorshSerialize, borsh::BorshDeserialize, Default, Debug)]
 pub struct Account {
     approvals: HashSet<Pubkey>,
     balances: HashMap<u128, u128>,
@@ -64,7 +100,6 @@ impl Account {
 }
 
 impl ERC1155 for ERC1155Implementation {
-    // TODO check if caller can execute transaction
     fn safe_batch_transfer_from(
         &self,
         from: Pubkey,
@@ -73,17 +108,26 @@ impl ERC1155 for ERC1155Implementation {
         values: Vec<u128>,
         _data: Vec<u8>,
     ) -> Result<()> {
-        let mut from_state: Account = Account::get_from_db(&self.store, from.clone())?;
-        let mut to_state: Account = Account::get_from_db(&self.store, to.clone())?;
+        let mut from_state: Account = Account::get_from_db(&self.store, from)?;
+        let mut to_state: Account = Account::get_from_db(&self.store, to)?;
+
+        if self.caller != from && from_state.approvals.get(&self.caller).is_none() {
+            return Err(format!(
+                "caller {} does not have approval of account {}",
+                self.caller, from
+            )
+            .into());
+        }
 
         for i in 0..ids.len() {
             let id = ids.get(i).ok_or("index out of bounds")?;
             let val = values.get(i).ok_or("index out of bounds")?;
 
-            // TODO not sure if this works
-            if from_state.balances.get(id).unwrap_or(&0) > val {
-                *from_state.balances.get_mut(id).unwrap_or(&mut 0) -= val;
-                *to_state.balances.get_mut(id).unwrap_or(&mut 0) += val;
+            let from_bal = from_state.balances.get(id).unwrap_or(&0);
+            let to_bal = to_state.balances.get(id).unwrap_or(&0);
+            if from_bal >= val {
+                from_state.balances.insert(*id, from_bal - val);
+                to_state.balances.insert(*id, to_bal + val);
             } else {
                 return Err(format!("insufficient balance for token num {}", id).into());
             }
@@ -101,26 +145,26 @@ impl ERC1155 for ERC1155Implementation {
             let owner = owners.get(i).ok_or("index out of bounds")?;
             let id = ids.get(i).ok_or("index out of bounds")?;
 
-            let mut owner_state = Account::get_from_db(&self.store, owner.clone())?;
-            balances.push(owner_state.balances.get(id).unwrap_or(&0).clone());
+            let owner_state = Account::get_from_db(&self.store, *owner)?;
+            balances.push(*owner_state.balances.get(id).unwrap_or(&0));
         }
 
         Ok(balances)
     }
 
     fn set_approval_for_all(&self, operator: Pubkey, approved: bool) -> Result<()> {
-        let mut caller_state = Account::get_from_db(&self.store, self.caller.clone())?;
+        let mut caller_state = Account::get_from_db(&self.store, self.caller)?;
         if approved {
             caller_state.approvals.insert(operator);
         } else {
             caller_state.approvals.remove(&operator);
         }
-        Account::set_to_db(&self.store, self.caller.clone(), caller_state);
+        Account::set_to_db(&self.store, self.caller, caller_state)?;
         Ok(())
     }
 
     fn is_approved_for_all(&self, owner: Pubkey, operator: Pubkey) -> Result<bool> {
-        let mut owner_state = Account::get_from_db(&self.store, owner.clone())?;
+        let owner_state = Account::get_from_db(&self.store, owner)?;
         Ok(owner_state.approvals.get(&operator).is_some())
     }
 }
